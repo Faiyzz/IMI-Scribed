@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Mic, Square, Pause, Play, ChevronLeft, Shield, Clock, User } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import logger from "@/utils/logger";
 
 export default function RecordingSessionPage() {
     const { id } = useParams();
@@ -12,22 +13,67 @@ export default function RecordingSessionPage() {
     const [isRecording, setIsRecording] = useState(true);
     const [duration, setDuration] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
-    
+
     // Audio visualization state
     const [audioLevels, setAudioLevels] = useState<number[]>(new Array(20).fill(10));
     const timerRef = useRef<NodeJS.Timeout | null>(null);
-
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
     useEffect(() => {
         fetchSession();
         startTimer();
-        simulateAudioInput();
-        return () => stopTimer();
+        startRecording(); // 👈 ADD THIS
+        return () => {
+            stopTimer();
+            stopRecording();
+        };
     }, [id]);
 
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+            });
+
+            streamRef.current = stream;
+
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+
+            mediaRecorder.onstart = () => {
+                logger.info("🎤 Recording started");
+                setIsRecording(true);
+            };
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    logger.debug("📦 Audio chunk received", { size: event.data.size });
+                }
+            };
+
+            mediaRecorder.onerror = (err) => {
+                logger.error("Recorder error", err);
+            };
+
+            mediaRecorder.start(250); // 250ms chunks
+        } catch (error) {
+            logger.error("Mic access denied", error);
+            toast.error("Microphone access is required.");
+        }
+    };
+
+    const stopRecording = () => {
+        mediaRecorderRef.current?.stop();
+
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+
+        setIsRecording(false);
+        logger.info("🛑 Recording stopped");
+    };
     const fetchSession = async () => {
         try {
-            const token = localStorage.getItem("auth-storage") 
-                ? JSON.parse(localStorage.getItem("auth-storage")!).state.token 
+            const token = localStorage.getItem("auth-storage")
+                ? JSON.parse(localStorage.getItem("auth-storage")!).state.token
                 : null;
 
             const response = await fetch(`http://localhost:5000/api/sessions/${id}`, {
@@ -57,13 +103,7 @@ export default function RecordingSessionPage() {
         if (timerRef.current) clearInterval(timerRef.current);
     };
 
-    const simulateAudioInput = () => {
-        if (!isRecording) return;
-        const interval = setInterval(() => {
-            setAudioLevels(prev => prev.map(() => Math.floor(Math.random() * 60) + 10));
-        }, 150);
-        return () => clearInterval(interval);
-    };
+
 
     const formatDuration = (sec: number) => {
         const m = Math.floor(sec / 60);
@@ -72,11 +112,10 @@ export default function RecordingSessionPage() {
     };
 
     const handleFinish = async () => {
+        stopRecording(); // 👈 important
         stopTimer();
-        setIsRecording(false);
+
         toast.success("Recording saved. Processing transcript...");
-        
-        // In a real app, we'd call an API to end the session
         router.push("/history");
     };
 
@@ -90,7 +129,7 @@ export default function RecordingSessionPage() {
 
             {/* TOP BAR */}
             <div className="absolute top-8 left-8 right-8 flex justify-between items-center z-10">
-                <button 
+                <button
                     onClick={() => router.back()}
                     className="flex items-center gap-2 text-white/40 hover:text-white transition group bg-white/5 px-4 py-2 rounded-xl border border-white/5"
                 >
@@ -130,7 +169,7 @@ export default function RecordingSessionPage() {
                 {/* VISUALIZER */}
                 <div className="flex items-end justify-center gap-1.5 h-32 sm:h-48 mb-8">
                     {audioLevels.map((level, i) => (
-                        <div 
+                        <div
                             key={i}
                             className="w-1 sm:w-2 bg-gradient-to-t from-blue-700 via-blue-400 to-white rounded-full transition-all duration-150 ease-out"
                             style={{ height: isRecording ? `${level}%` : '5px', opacity: isRecording ? 1 : 0.2 }}
@@ -140,18 +179,27 @@ export default function RecordingSessionPage() {
 
                 {/* CONTROLS */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                    <button 
-                        onClick={() => setIsRecording(!isRecording)}
-                        className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 border-2 active:scale-90 ${
-                            isRecording 
-                            ? "bg-white/5 border-white/10 text-white hover:bg-white/10" 
+                    <button
+                        onClick={() => {
+                            if (!mediaRecorderRef.current) return;
+
+                            if (isRecording) {
+                                mediaRecorderRef.current.pause();
+                                setIsRecording(false);
+                            } else {
+                                mediaRecorderRef.current.resume();
+                                setIsRecording(true);
+                            }
+                        }}
+                        className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 border-2 active:scale-90 ${isRecording
+                            ? "bg-white/5 border-white/10 text-white hover:bg-white/10"
                             : "bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-500/20"
-                        }`}
+                            }`}
                     >
                         {isRecording ? <Pause fill="currentColor" size={24} /> : <Play fill="currentColor" size={24} />}
                     </button>
 
-                    <button 
+                    <button
                         onClick={handleFinish}
                         className="group bg-white text-[#0B0F19] px-10 py-5 rounded-[2rem] font-black text-lg uppercase tracking-wider flex items-center gap-3 hover:scale-105 transition-all active:scale-95 shadow-2xl shadow-white/10"
                     >

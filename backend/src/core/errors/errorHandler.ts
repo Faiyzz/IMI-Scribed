@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "./AppError";
 import { env } from "../config/env";
+import logger from "../logger/logger";
 
 interface ErrorResponse {
     success: false;
@@ -23,7 +24,7 @@ export const errorHandler = (
     }
 
     // Mongoose duplicate key
-    if ("code" in err && (err as NodeJS.ErrnoException).code === "11000") {
+    if ("code" in err && (err as any).code === "11000") {
         statusCode = 409;
         message = "A record with this value already exists.";
     }
@@ -44,8 +45,15 @@ export const errorHandler = (
         message = "Your session has expired. Please log in again.";
     }
 
+    // Log the error using Winston
+    if (statusCode >= 500) {
+        logger.error(`${message}: ${err.stack || err.message}`);
+    } else {
+        logger.warn(`${message}: ${err.message}`);
+    }
+
     const body: ErrorResponse = { success: false, message };
-    if (!env.isProd) body.stack = err.stack;
+    if (env.NODE_ENV !== "production") body.stack = err.stack;
 
     res.status(statusCode).json(body);
 };

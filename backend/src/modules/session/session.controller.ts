@@ -5,7 +5,10 @@ import { asyncHandler } from "../../utils/asyncHandler";
 
 class SessionController {
     createSession = asyncHandler(async (req: Request, res: Response) => {
-        const clinicianId = (req as any).user.id;
+        // AuthMiddleware sets user on req
+        const user = (req as any).user;
+        const clinicianId = user._id; 
+        
         const session = await sessionService.createSession(clinicianId, req.body);
         
         sendCreated(res, {
@@ -14,7 +17,9 @@ class SessionController {
     });
 
     getSessions = asyncHandler(async (req: Request, res: Response) => {
-        const clinicianId = (req as any).user.id;
+        const user = (req as any).user;
+        const clinicianId = user._id;
+        
         const sessions = await sessionService.getSessionsByClinician(clinicianId);
 
         sendSuccess(res, {

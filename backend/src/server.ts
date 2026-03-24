@@ -1,6 +1,7 @@
 import app from "./app";
 import { env } from "./core/config/env";
 import { connectDB } from "./core/database/mongoose";
+import logger from "./core/logger/logger";
 
 const startServer = async () => {
     try {
@@ -10,10 +11,10 @@ const startServer = async () => {
         const port = env.PORT;
         
         app.listen(port, () => {
-            console.log(`🚀 Server running in ${env.NODE_ENV} mode on port ${port}`);
+            logger.info(`🚀 Server running in ${env.NODE_ENV} mode on port ${port}`);
         });
     } catch (error) {
-        console.error("❌ Failed to start server:", error);
+        logger.error("❌ Failed to start server:", error);
         process.exit(1);
     }
 };

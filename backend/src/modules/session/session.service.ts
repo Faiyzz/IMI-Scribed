@@ -4,9 +4,14 @@ import { AppError } from "../../core/errors/AppError";
 
 class SessionService {
     async createSession(clinicianId: string, data: CreateSessionDto): Promise<ISession> {
+        if (!clinicianId) {
+            throw new AppError("Clinician ID is required to start a session", 400);
+        }
+
         return await Session.create({
             clinicianId,
             patientName: data.patientName,
+            patientGender: data.patientGender,
             status: "active",
         });
     }

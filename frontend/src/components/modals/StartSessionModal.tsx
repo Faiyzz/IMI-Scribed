@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, User, ChevronRight } from "lucide-react";
+import { X, User, ChevronRight, ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
@@ -27,9 +27,14 @@ export default function StartSessionModal({ isOpen, onClose }: StartSessionModal
 
         setIsLoading(true);
         try {
-            const token = localStorage.getItem("auth-storage") 
-                ? JSON.parse(localStorage.getItem("auth-storage")!).state.token 
-                : null;
+            const authStorage = localStorage.getItem("auth-storage");
+            const token = authStorage ? JSON.parse(authStorage).state?.token : null;
+
+            if (!token) {
+                toast.error("You are not authorized. Please log in again.");
+                router.push("/login");
+                return;
+            }
 
             const response = await fetch("http://localhost:5000/api/sessions", {
                 method: "POST",
@@ -37,7 +42,10 @@ export default function StartSessionModal({ isOpen, onClose }: StartSessionModal
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
                 },
-                body: JSON.stringify({ patientName, patientGender: gender }),
+                body: JSON.stringify({ 
+                    patientName, 
+                    patientGender: gender 
+                }),
             });
 
             const result = await response.json();
@@ -45,10 +53,9 @@ export default function StartSessionModal({ isOpen, onClose }: StartSessionModal
 
             toast.success("Session initialized");
             onClose();
-            // Redirect to the recording page
             router.push(`/session/${result.data.session.id}`);
         } catch (error: any) {
-            toast.error(error.message);
+            toast.error(error.message || "Something went wrong.");
         } finally {
             setIsLoading(false);
         }
@@ -89,23 +96,23 @@ export default function StartSessionModal({ isOpen, onClose }: StartSessionModal
                             </div>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                             <label className="text-xs font-bold text-white/30 uppercase tracking-[0.1em] ml-1">Patient Gender</label>
-                            <div className="grid grid-cols-2 gap-3">
-                                {["male", "female", "other", "prefer_not_to_say"].map((g) => (
-                                    <button
-                                        key={g}
-                                        type="button"
-                                        onClick={() => setGender(g as any)}
-                                        className={`py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 border ${
-                                            gender === g 
-                                            ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20" 
-                                            : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white"
-                                        }`}
-                                    >
-                                        {g.replace(/_/g, " ")}
-                                    </button>
-                                ))}
+                            <div className="relative">
+                                <select
+                                    required
+                                    value={gender}
+                                    onChange={(e) => setGender(e.target.value as any)}
+                                    className="w-full bg-white/5 border border-white/10 focus:border-blue-500/50 outline-none py-4 px-4 rounded-2xl text-white font-medium appearance-none transition duration-200 cursor-pointer"
+                                    disabled={isLoading}
+                                >
+                                    <option value="" disabled className="bg-[#101522]">Select Gender</option>
+                                    <option value="male" className="bg-[#101522]">Male</option>
+                                    <option value="female" className="bg-[#101522]">Female</option>
+                                    <option value="other" className="bg-[#101522]">Other</option>
+                                    <option value="prefer_not_to_say" className="bg-[#101522]">Prefer not to say</option>
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" size={18} />
                             </div>
                         </div>
 
