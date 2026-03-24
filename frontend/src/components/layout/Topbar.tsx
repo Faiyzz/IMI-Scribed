@@ -4,9 +4,11 @@ import { useState } from "react";
 import { Bell, HelpCircle, Mic, LogOut, User, ChevronDown } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
+import StartSessionModal from "../modals/StartSessionModal";
 
 export default function Topbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const { user, logout } = useAuthStore();
     const router = useRouter();
 
@@ -17,7 +19,7 @@ export default function Topbar() {
 
     const userInitials = user?.name
         ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase()
-        : "DA";
+        : "Clinician";
 
     return (
         <header className="h-16 px-8 flex items-center justify-between bg-[#0B0F19] border-b border-white/5 shrink-0 relative z-50">
@@ -32,7 +34,10 @@ export default function Topbar() {
                     Profile Settings
                 </span>
 
-                <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition">
+                <button 
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition active:scale-95"
+                >
                     <Mic size={16} />
                     Start New Session
                 </button>
@@ -88,6 +93,11 @@ export default function Topbar() {
                     </div>
                 </div>
             </div>
+
+            <StartSessionModal 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+            />
         </header>
     );
 }

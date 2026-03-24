@@ -2,9 +2,12 @@
 
 import { Mic, Calendar, Activity } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useState } from "react";
+import StartSessionModal from "@/components/modals/StartSessionModal";
 
 export default function DashboardPage() {
     const { user } = useAuthStore();
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     return (
         <div className="grid grid-cols-12 gap-6">
@@ -35,7 +38,10 @@ export default function DashboardPage() {
                         Ready to transcribe your next patient consultation?
                     </h2>
 
-                    <button className="mt-6 flex items-center gap-2 bg-blue-600 px-4 py-2 rounded-lg text-sm hover:opacity-90 transition">
+                    <button 
+                        onClick={() => setIsModalOpen(true)}
+                        className="mt-6 flex items-center gap-2 bg-blue-600 px-4 py-2 rounded-lg text-sm hover:opacity-90 transition active:scale-95"
+                    >
                         <Mic size={16} />
                         Start New Session
                     </button>
@@ -86,6 +92,11 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </div>
+
+            <StartSessionModal 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+            />
         </div>
     );
 }

@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "./core/errors/errorHandler";
 import authRoutes from "./modules/auth/auth.routes";
+import sessionRoutes from "./modules/session/session.routes";
 import { env } from "./core/config/env";
 
 const app: Application = express();
@@ -20,6 +21,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/sessions", sessionRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
