@@ -1,0 +1,11 @@
+{
+  "name": "imi-scribe",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "dependencies": {
+    "socket.io": "^4.8.3"
+  }
+}
