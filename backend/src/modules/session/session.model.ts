@@ -7,6 +7,8 @@ export interface ISession extends Document {
     status: "active" | "completed" | "draft";
     duration: number; // in seconds
     transcriptId?: mongoose.Types.ObjectId;
+    rawTranscript?: string;
+    soapNote?: any;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -40,6 +42,14 @@ const SessionSchema: Schema = new Schema(
         transcriptId: {
             type: Schema.Types.ObjectId,
             ref: "Transcript",
+        },
+        rawTranscript: {
+            type: String,
+            trim: true,
+        },
+        soapNote: {
+            type: Object,
+            default: null,
         },
     },
     {

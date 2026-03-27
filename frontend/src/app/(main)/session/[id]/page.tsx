@@ -14,7 +14,7 @@ export default function RecordingSessionPage() {
     const [isRecording, setIsRecording] = useState(true);
     const [duration, setDuration] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
-    
+
     // Transcripts state
     const [transcripts, setTranscripts] = useState<string[]>([]);
     const [interimTranscript, setInterimTranscript] = useState("");
@@ -33,9 +33,37 @@ export default function RecordingSessionPage() {
 
     useEffect(() => {
         fetchSession();
-        startTimer();
-        startRecording();
-        
+
+        // 👇 INITIALIZE SOCKET & START SESSION
+        const socket = io("http://localhost:5000");
+        socketRef.current = socket;
+
+        socket.on("connect", () => {
+            logger.info("🟢 Socket connected:", socket.id);
+
+            socket.emit("start-session", { sessionId: id });
+
+            startRecording();
+            startTimer();
+        });
+
+        socket.on("disconnect", () => {
+            logger.info("🔴 Socket disconnected");
+        });
+
+        socket.on("transcript", (data: { text: string; isFinal: boolean }) => {
+            if (data.isFinal) {
+                setTranscripts(prev => [...prev, data.text]);
+                setInterimTranscript("");
+            } else {
+                setInterimTranscript(data.text);
+            }
+        });
+
+        socket.on("error", (err) => {
+            logger.error("Socket error", err);
+        });
+
         return () => {
             cleanupSession();
         };
@@ -51,21 +79,48 @@ export default function RecordingSessionPage() {
     const cleanupSession = () => {
         logger.info("🧹 Cleaning up session resources...");
         stopTimer();
-        stopRecording();
-        
+
+        // 👇 STOP RECORDER
+        if (mediaRecorderRef.current) {
+            if (mediaRecorderRef.current.state !== "inactive") {
+                try {
+                    mediaRecorderRef.current.stop();
+                } catch (e) {
+                    logger.error("Error stopping media recorder", e);
+                }
+            }
+            mediaRecorderRef.current = null;
+        }
+
+        // 👇 STOP STREAM TRACKS (CRITICAL FOR MIC LED)
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => {
+                track.stop();
+                logger.info(`Track stopped: ${track.kind} - ${track.label}`);
+            });
+            streamRef.current = null;
+        }
+
+        // 👇 DISCONNECT SOCKET
         if (socketRef.current) {
             socketRef.current.disconnect();
             socketRef.current = null;
         }
 
+        // 👇 CLEANUP VISUALIZER
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
         }
 
         if (audioContextRef.current) {
-            audioContextRef.current.close();
+            if (audioContextRef.current.state !== 'closed') {
+                audioContextRef.current.close().catch(err => logger.error("Error closing AudioContext", err));
+            }
             audioContextRef.current = null;
         }
+
+        setIsRecording(false);
     };
 
     const startRecording = async () => {
@@ -88,18 +143,18 @@ export default function RecordingSessionPage() {
             const source = audioContext.createMediaStreamSource(stream);
             source.connect(analyser);
             analyser.fftSize = 64;
-            
+
             audioContextRef.current = audioContext;
             analyserRef.current = analyser;
 
             const updateVisualizer = () => {
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
                 analyser.getByteFrequencyData(dataArray);
-                
+
                 // Map frequency data to audio levels
                 const levels = Array.from(dataArray).slice(0, 30).map(v => (v / 255) * 100);
                 setAudioLevels(levels);
-                
+
                 animationFrameRef.current = requestAnimationFrame(updateVisualizer);
             };
             updateVisualizer();
@@ -135,55 +190,11 @@ export default function RecordingSessionPage() {
     };
 
     const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-            try {
-                mediaRecorderRef.current.stop();
-            } catch (e) {
-                logger.error("Error stopping media recorder", e);
-            }
-        }
-
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach((track) => {
-                track.stop();
-                logger.info(`Track stopped: ${track.kind} - ${track.label}`);
-            });
-            streamRef.current = null;
-        }
-
-        mediaRecorderRef.current = null;
-        setIsRecording(false);
-        logger.info("🛑 Recording stopped");
+        cleanupSession();
+        logger.info("🛑 Recording stopped via stopRecording");
     };
 
-    useEffect(() => {
-        socketRef.current = io("http://localhost:5000");
-
-        socketRef.current.on("connect", () => {
-            logger.info("🟢 Socket connected:", socketRef.current?.id);
-        });
-
-        socketRef.current.on("disconnect", () => {
-            logger.info("🔴 Socket disconnected");
-        });
-
-        socketRef.current.on("transcript", (data: { text: string; isFinal: boolean }) => {
-            if (data.isFinal) {
-                setTranscripts(prev => [...prev, data.text]);
-                setInterimTranscript("");
-            } else {
-                setInterimTranscript(data.text);
-            }
-        });
-
-        socketRef.current.on("error", (err) => {
-            logger.error("Socket error", err);
-        });
-
-        return () => {
-            socketRef.current?.disconnect();
-        };
-    }, []);
+    // Removed separate socket useEffect as it's now combined with session effect
 
     const fetchSession = async () => {
         try {
@@ -280,7 +291,7 @@ export default function RecordingSessionPage() {
                 </div>
 
                 {/* TRANSCRIPT AREA */}
-                <div 
+                <div
                     ref={scrollRef}
                     className="flex-1 bg-white/[0.02] rounded-[2.5rem] border border-white/5 p-8 overflow-y-auto custom-scrollbar relative"
                 >
@@ -313,8 +324,8 @@ export default function RecordingSessionPage() {
                             <div
                                 key={i}
                                 className="flex-1 bg-gradient-to-t from-blue-700 via-blue-400 to-white rounded-full transition-all duration-75 ease-out"
-                                style={{ 
-                                    height: isRecording ? `${Math.max(level, 10)}%` : '4px', 
+                                style={{
+                                    height: isRecording ? `${Math.max(level, 10)}%` : '4px',
                                     opacity: isRecording ? 0.3 + (level / 150) : 0.1,
                                     maxWidth: '8px'
                                 }}

@@ -36,13 +36,13 @@ export const createDeepgramConnection = (): DeepgramConnection => {
         diarize: true,
     }).then((socket: any) => {
         socketInstance = socket;
-        
+
         // v5 requires calling connect() explicitly
         socket.connect();
 
         const flushBuffer = () => {
             if (!socketInstance || socketInstance.readyState !== WS_READY_STATE.OPEN) return;
-            
+
             while (buffer.length > 0) {
                 const chunk = buffer.shift();
                 try {
@@ -65,9 +65,18 @@ export const createDeepgramConnection = (): DeepgramConnection => {
         });
 
         socket.on("message", (data: any) => {
+            // Debug: Log the type of message received
+            console.log("Deepgram message type:", data.type);
+            
             // In v5, transcript data comes in 'Results' message type
             if (data.type === "Results" && data.channel?.alternatives?.[0]) {
-                emitter.emit("transcriptReceived", data);
+                const transcript = data.channel.alternatives[0].transcript;
+                if (transcript) {
+                    emitter.emit("transcriptReceived", {
+                        text: transcript,
+                        isFinal: data.is_final,
+                    });
+                }
             }
             emitter.emit("message", data);
         });
@@ -97,14 +106,14 @@ export const createDeepgramConnection = (): DeepgramConnection => {
                 buffer.push(data);
             }
         };
-        
+
         emitter.finish = () => {
             try {
                 if (socketInstance) {
                     socketInstance.close();
                 }
             } catch (err) {
-                 emitter.emit("error", err);
+                emitter.emit("error", err);
             }
         };
 

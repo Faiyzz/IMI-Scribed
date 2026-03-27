@@ -8,7 +8,6 @@ import StartSessionModal from "../modals/StartSessionModal";
 
 export default function Topbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const { user, logout } = useAuthStore();
     const router = useRouter();
 
@@ -30,25 +29,15 @@ export default function Topbar() {
 
             {/* RIGHT — actions */}
             <div className="flex items-center gap-6">
-                <span className="text-sm font-medium text-white/50 hover:text-white cursor-pointer transition">
-                    Profile Settings
-                </span>
 
-                <button 
-                    onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition active:scale-95"
-                >
-                    <Mic size={16} />
-                    Start New Session
-                </button>
+
 
                 <div className="flex items-center gap-4 pl-4 border-l border-white/10">
-                    <Bell size={18} className="text-white/50 hover:text-white cursor-pointer transition" />
-                    <HelpCircle size={18} className="text-white/50 hover:text-white cursor-pointer transition" />
-                    
+
+
                     {/* PROFILE DROPDOWN */}
                     <div className="relative">
-                        <div 
+                        <div
                             className="flex items-center gap-2 cursor-pointer group"
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                         >
@@ -61,8 +50,8 @@ export default function Topbar() {
                         {/* DROPDOWN MENU */}
                         {isMenuOpen && (
                             <>
-                                <div 
-                                    className="fixed inset-0" 
+                                <div
+                                    className="fixed inset-0"
                                     onClick={() => setIsMenuOpen(false)}
                                 />
                                 <div className="absolute right-0 mt-3 w-48 bg-[#151B2B] border border-white/10 rounded-xl shadow-2xl py-2 overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -72,14 +61,14 @@ export default function Topbar() {
                                     </div>
 
                                     <div className="px-1">
-                                        <button 
+                                        <button
                                             className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition"
                                             onClick={() => setIsMenuOpen(false)}
                                         >
                                             <User size={16} />
                                             Your Profile
                                         </button>
-                                        <button 
+                                        <button
                                             className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition"
                                             onClick={handleLogout}
                                         >
@@ -94,10 +83,7 @@ export default function Topbar() {
                 </div>
             </div>
 
-            <StartSessionModal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
-            />
+
         </header>
     );
 }
