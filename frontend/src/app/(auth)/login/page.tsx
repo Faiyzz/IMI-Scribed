@@ -11,7 +11,7 @@ export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    
+
     const setAuth = useAuthStore((state) => state.setAuth);
     const router = useRouter();
 
@@ -46,26 +46,35 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen grid md:grid-cols-2 bg-[#F8FAFC]">
             {/* LEFT SIDE — Brand Identity */}
-            <div className="hidden md:flex flex-col justify-between bg-[#0B0F19] text-white p-12 relative overflow-hidden">
-                <div className="relative z-10">
-                    <div className="text-4xl mb-12 font-black tracking-tighter text-blue-500">IMI Scribe</div>
+            {/* LEFT SIDE — Final Minimal Premium */}
+            <div className="hidden md:flex items-center justify-center relative bg-[#0B0F19] text-white overflow-hidden">
 
-                    <h1 className="text-5xl font-bold leading-tight tracking-tight">
-                        Revolutionizing <br /> Clinical Notes 👋
-                    </h1>
+                {/* Background Image (optional) */}
+                <img
+                    src="/your-image.png" // replace with your screenshot / illustration
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-25"
+                />
 
-                    <p className="mt-6 text-lg text-white/60 max-w-sm font-medium leading-relaxed">
-                        Say goodbye to hours of charting. AI-powered medical scribe that accurately captures every detail of your patient encounters.
-                    </p>
-                </div>
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-[#0B0F19]/85" />
 
-                <p className="text-sm text-white/40 relative z-10">
-                    © {new Date().getFullYear()} IMI Scribe. All rights reserved.
-                </p>
+                {/* Subtle radial glow */}
+                <div className="absolute w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]" />
 
-                {/* Aesthetic Background Elements */}
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px]" />
-                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-blue-500/10 rounded-full blur-[80px]" />
+                {/* Main Text */}
+                <h1 className="relative z-10 text-center font-extrabold tracking-tight leading-[0.9]
+                 text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl px-6">
+
+                    <span className="block">Clinical Notes</span>
+
+                    <span className="block bg-gradient-to-r from-blue-400 to-blue-600 
+                     bg-clip-text text-transparent">
+                        Reimagined.
+                    </span>
+
+                </h1>
+
             </div>
 
             {/* RIGHT SIDE — Form */}

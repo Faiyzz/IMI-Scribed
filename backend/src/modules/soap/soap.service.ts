@@ -1,8 +1,11 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { env } from "../../core/config/env";
 import { SoapNote } from "./soap.types";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY!,
+const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    generationConfig: { responseMimeType: "application/json" },
 });
 
 export const generateSoapNote = async (
@@ -43,20 +46,15 @@ Schema:
 }
 `;
 
-    const response = await openai.chat.completions.create({
-        model: "gpt-4.1",
-        messages: [
-            { role: "system", content: systemPrompt },
-            {
-                role: "user",
-                content: `Transcript:\n${transcript}`,
-            },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-    });
+    const result = await model.generateContent(`
+        ${systemPrompt}
+        
+        Transcript:
+        ${transcript}
+    `);
 
-    const content = response.choices[0].message.content || "{}";
+    const response = await result.response;
+    const content = response.text() || "{}";
 
     try {
         return JSON.parse(content);

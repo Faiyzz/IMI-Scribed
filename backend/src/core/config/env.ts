@@ -14,5 +14,7 @@ export const env = {
     JWT_SECRET: requireEnv("JWT_SECRET"),
     JWT_EXPIRES_IN: process.env["JWT_EXPIRES_IN"] ?? "7d",
     NODE_ENV: process.env["NODE_ENV"] ?? "development",
+    DEEPGRAM_API_KEY: requireEnv("DEEPGRAM_API_KEY"),
+    GEMINI_API_KEY: requireEnv("GEMINI_API_KEY"),
     isProd: process.env["NODE_ENV"] === "production",
 };
