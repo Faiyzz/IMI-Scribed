@@ -14,11 +14,9 @@ const app: Application = express();
 // Standard middlewares
 app.use(helmet({ crossOriginResourcePolicy: false })); // More permissive for now
 app.use(cors({ 
-    origin: (origin, callback) => {
-        // Reflect origin back or allow if null (mobile/some clients)
-        callback(null, true);
-    },
-    credentials: true 
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
 })); // Enable CORS
 app.use(express.json()); // Body parsing
 app.use(cookieParser()); // Cookie parsing
