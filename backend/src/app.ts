@@ -12,8 +12,14 @@ import { env } from "./core/config/env";
 const app: Application = express();
 
 // Standard middlewares
-app.use(helmet()); // Security headers
-app.use(cors({ origin: true, credentials: true })); // Enable CORS
+app.use(helmet({ crossOriginResourcePolicy: false })); // More permissive for now
+app.use(cors({ 
+    origin: (origin, callback) => {
+        // Reflect origin back or allow if null (mobile/some clients)
+        callback(null, true);
+    },
+    credentials: true 
+})); // Enable CORS
 app.use(express.json()); // Body parsing
 app.use(cookieParser()); // Cookie parsing
 
