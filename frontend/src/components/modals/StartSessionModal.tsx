@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, User, ChevronRight, ChevronDown, Activity, Info } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { getApiUrl } from "@/utils/api";
 
 interface StartSessionModalProps {
     isOpen: boolean;
@@ -37,7 +38,7 @@ export default function StartSessionModal({ isOpen, onClose }: StartSessionModal
                 return;
             }
 
-            const response = await fetch("http://localhost:5000/api/sessions", {
+            const response = await fetch(`${getApiUrl()}/api/sessions`, {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",

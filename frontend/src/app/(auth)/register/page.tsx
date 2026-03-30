@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { getApiUrl } from "@/utils/api";
 
 export default function RegisterPage() {
     const [name, setName] = useState("");
@@ -20,7 +21,7 @@ export default function RegisterPage() {
         setIsLoading(true);
 
         try {
-            const response = await fetch("http://localhost:5000/api/auth/register", {
+            const response = await fetch(`${getApiUrl()}/api/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name, email, password }),

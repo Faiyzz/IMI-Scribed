@@ -1,6 +1,8 @@
 "use client";
 
-const LOG_ENDPOINT = "http://localhost:5000/api/logs";
+import { getApiUrl } from "./api";
+
+const LOG_ENDPOINT = `${getApiUrl()}/api/logs`;
 
 type LogLevel = "info" | "warn" | "error" | "debug";
 

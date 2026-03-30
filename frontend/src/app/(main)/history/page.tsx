@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { getApiUrl } from "@/utils/api";
 
 export default function HistoryPage() {
     const [sessions, setSessions] = useState<any[]>([]);
@@ -31,7 +32,7 @@ export default function HistoryPage() {
 
             if (!token) return;
 
-            const response = await fetch("http://localhost:5000/api/sessions", {
+            const response = await fetch(`${getApiUrl()}/api/sessions`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
             const result = await response.json();

@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import logger from "@/utils/logger";
 import { io, Socket } from "socket.io-client";
+import { getApiUrl } from "@/utils/api";
 
 export default function RecordingSessionPage() {
     const { id } = useParams();
@@ -121,7 +122,7 @@ export default function RecordingSessionPage() {
     const fetchSession = async () => {
         try {
             const token = localStorage.getItem("auth-storage") ? JSON.parse(localStorage.getItem("auth-storage")!).state.token : null;
-            const response = await fetch(`http://localhost:5000/api/sessions/${id}`, {
+            const response = await fetch(`${getApiUrl()}/api/sessions/${id}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
             const result = await response.json();
