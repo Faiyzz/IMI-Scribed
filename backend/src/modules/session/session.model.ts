@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface ISession extends Document {
     clinicianId: mongoose.Types.ObjectId;
     patientName: string;
+    patientAge: number;
     patientGender: "male" | "female" | "other" | "prefer_not_to_say";
     status: "active" | "completed" | "draft";
     duration: number; // in seconds
@@ -24,6 +25,11 @@ const SessionSchema: Schema = new Schema(
             type: String,
             required: [true, "Patient name is required"],
             trim: true,
+        },
+        patientAge: {
+            type: Number,
+            required: [true, "Patient age is required"],
+            min: [0, "Age cannot be negative"],
         },
         patientGender: {
             type: String,

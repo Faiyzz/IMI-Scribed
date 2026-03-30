@@ -5,8 +5,9 @@ import logger from "./core/logger/logger";
 import http from "http";
 import { Server } from "socket.io";
 import { createDeepgramConnection } from "./modules/transcript/transcript.service";
-import { Session } from "./modules/session/session.model";
+import { Session, ISession } from "./modules/session/session.model";
 import { generateSoapNote } from "./modules/soap/soap.service";
+import { Patient } from "./modules/patient/patient.model";
 
 const startServer = async () => {
     try {
@@ -37,8 +38,8 @@ const startServer = async () => {
             });
             deepgramConnection.on("transcriptReceived", (data: any) => {
                 if (!data.text) return;
-
-                console.log(`📝 ${data.isFinal ? "FINAL" : "PARTIAL"} Transcript:`, data.text);
+                
+                // console.log(`📝 ${data.isFinal ? "FINAL" : "PARTIAL"} Transcript:`, data.text);
 
                 // 👉 ONLY store FINAL
                 if (data.isFinal) {
@@ -46,6 +47,7 @@ const startServer = async () => {
                 }
 
                 // 👉 still send to frontend
+                console.log(`📡 Emitting ${data.isFinal ? "FINAL" : "PARTIAL"} transcript to ${socket.id}`);
                 socket.emit("transcript", data);
             });
 
@@ -73,20 +75,46 @@ const startServer = async () => {
                 deepgramConnection.finish();
 
                 if (sessionId && fullTranscript.trim()) {
+                    let soap = null;
                     try {
-                        // 👉 STEP 1: Generate SOAP
-                        const soap = await generateSoapNote(fullTranscript);
-
-                        // 👉 STEP 2: Save BOTH transcript + SOAP
-                        await Session.findByIdAndUpdate(sessionId, {
-                            rawTranscript: fullTranscript.trim(),
-                            soapNote: soap,   // 👈 NEW FIELD
-                            status: "completed",
-                        });
-
-                        console.log("💾 Transcript + SOAP saved");
+                        // 👉 STEP 1: Generate SOAP (Try)
+                        soap = await generateSoapNote(fullTranscript);
+                        console.log("✅ SOAP generated successfully");
                     } catch (err) {
-                        console.error("❌ Failed to process SOAP", err);
+                        console.error("⚠️ Failed to generate SOAP note, saving transcript only:", err);
+                    }
+
+                    try {
+                        // 👉 STEP 1.5: Fetch session to calculate duration
+                        const existingSession = await Session.findById(sessionId);
+                        let duration = 0;
+                        if (existingSession) {
+                            duration = Math.floor((Date.now() - existingSession.createdAt.getTime()) / 1000);
+                        }
+
+                        // 👉 STEP 2: Save whatever we have
+                        const updatedSession = await Session.findByIdAndUpdate(sessionId, {
+                            rawTranscript: fullTranscript.trim(),
+                            soapNote: soap,   
+                            status: "completed",
+                            duration: duration > 0 ? duration : 0,
+                        }, { new: true });
+
+                        if (updatedSession) {
+                            // 👉 STEP 3: Upsert Patient
+                            await Patient.findOneAndUpdate(
+                                { clinicianId: updatedSession.clinicianId, name: updatedSession.patientName },
+                                { 
+                                    age: updatedSession.patientAge, 
+                                    gender: updatedSession.patientGender,
+                                    lastVisit: new Date()
+                                },
+                                { upsert: true, new: true }
+                            );
+                            console.log("💾 Session + Patient updated in DB");
+                        }
+                    } catch (err) {
+                        console.error("❌ Fatal: Failed to save session to DB", err);
                     }
                 }
             });

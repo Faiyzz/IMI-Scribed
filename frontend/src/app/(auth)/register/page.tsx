@@ -32,7 +32,6 @@ export default function RegisterPage() {
                 throw new Error(result.message || "Registration failed");
             }
 
-            // Successfully registered — we'll automatically log them in since the backend returns user+token on register too
             setAuth(result.data.user, result.data.token);
             toast.success("Account created successfully!");
             router.push("/dashboard");
@@ -44,96 +43,110 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen grid md:grid-cols-2 bg-[#F8FAFC]">
-            {/* LEFT SIDE — Brand Identity */}
-            <div className="hidden md:flex flex-col justify-between bg-[#0B0F19] text-white p-12 relative overflow-hidden">
-                <div className="relative z-10">
-                    <div className="text-4xl mb-12 font-black tracking-tighter text-blue-500">IMI Scribe</div>
+        <div className="min-h-screen grid lg:grid-cols-12 bg-white selection:bg-sage-500/30 selection:text-sage-600">
+            {/* LEFT SIDE — Form Area */}
+            <div className="lg:col-span-5 flex flex-col justify-center px-8 sm:px-16 lg:px-24 py-12 relative z-10 animate-in fade-in slide-in-from-left-8 duration-700 ease-out">
+                <div className="w-full max-w-sm mx-auto lg:mx-0">
+                    {/* Logo/Brand */}
+                    <div className="flex items-center gap-3 mb-16">
+                        <div className="w-10 h-10 bg-sage-500 rounded-xl flex items-center justify-center shadow-lg shadow-sage-500/20">
+                            <span className="text-white font-black text-xl tracking-tighter">I</span>
+                        </div>
+                        <span className="text-xl font-black tracking-tighter text-slate-900 uppercase">IMI Scribe</span>
+                    </div>
 
-                    <h1 className="text-5xl font-bold leading-tight tracking-tight">
-                        Join the <br /> Future of Scribing ⚡
-                    </h1>
-
-                    <p className="mt-6 text-lg text-white/60 max-w-sm font-medium leading-relaxed">
-                        Start your journey towards effortless documentation. Join thousands of clinicians using AI to reclaim their time.
-                    </p>
-                </div>
-
-                <p className="text-sm text-white/40 relative z-10">
-                    © {new Date().getFullYear()} IMI Scribe. All rights reserved.
-                </p>
-
-                {/* Aesthetic Background Elements */}
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px]" />
-                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-blue-500/10 rounded-full blur-[80px]" />
-            </div>
-
-            {/* RIGHT SIDE — Form */}
-            <div className="flex items-center justify-center px-6 py-12">
-                <div className="w-full max-w-md">
-                    <div className="mb-8">
-                        <h3 className="text-3xl font-extrabold text-slate-900 mb-2">Create Account</h3>
-                        <p className="text-sm text-slate-500">
-                            Already have an account?{" "}
-                            <Link href="/login" className="text-blue-600 font-bold hover:underline">
-                                Sign in here
+                    <div className="mb-10">
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-3">Join Us.</h1>
+                        <p className="text-slate-500 font-medium leading-relaxed">
+                            Start reclaiming your time today. Already a member? {" "}
+                            <Link href="/login" className="text-sage-600 font-bold hover:text-sage-500 transition-colors">
+                                Sign In
                             </Link>
                         </p>
                     </div>
 
-                    <form className="space-y-4" onSubmit={handleSubmit}>
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Full Name</label>
+                    <form className="space-y-6" onSubmit={handleSubmit}>
+                        <div className="space-y-2 group">
+                            <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-1 transition-colors group-focus-within:text-sage-600">Full Name</label>
                             <input
                                 type="text"
                                 required
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="Dr. Jane Doe"
-                                className="w-full bg-[#F1F5F9] border-2 border-transparent focus:border-blue-500/50 focus:bg-white outline-none py-3 px-4 rounded-xl transition-all duration-200 text-slate-900"
+                                className="w-full bg-slate-50 border border-slate-200 focus:border-sage-500/50 focus:bg-white outline-none py-4 px-5 rounded-2xl text-slate-900 font-medium ring-0 focus:ring-4 focus:ring-sage-500/5 transition-all duration-300 shadow-sm"
                                 disabled={isLoading}
                             />
                         </div>
 
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Email Address</label>
+                        <div className="space-y-2 group">
+                            <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-1 transition-colors group-focus-within:text-sage-600">Email Address</label>
                             <input
                                 type="email"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="jane@clinic.com"
-                                className="w-full bg-[#F1F5F9] border-2 border-transparent focus:border-blue-500/50 focus:bg-white outline-none py-3 px-4 rounded-xl transition-all duration-200 text-slate-900"
+                                className="w-full bg-slate-50 border border-slate-200 focus:border-sage-500/50 focus:bg-white outline-none py-4 px-5 rounded-2xl text-slate-900 font-medium ring-0 focus:ring-4 focus:ring-sage-500/5 transition-all duration-300 shadow-sm"
                                 disabled={isLoading}
                             />
                         </div>
 
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Password</label>
+                        <div className="space-y-2 group">
+                            <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-1 transition-colors group-focus-within:text-sage-600">Password</label>
                             <input
                                 type="password"
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Minimum 8 characters"
-                                className="w-full bg-[#F1F5F9] border-2 border-transparent focus:border-blue-500/50 focus:bg-white outline-none py-3 px-4 rounded-xl transition-all duration-200 text-slate-900"
+                                placeholder="••••••••"
+                                className="w-full bg-slate-50 border border-slate-200 focus:border-sage-500/50 focus:bg-white outline-none py-4 px-5 rounded-2xl text-slate-900 font-medium ring-0 focus:ring-4 focus:ring-sage-500/5 transition-all duration-300 shadow-sm"
                                 disabled={isLoading}
                             />
                         </div>
 
-                        <div className="pt-2">
-                             <p className="text-[11px] text-slate-400 pb-4 text-center">
-                                By signing up, you agree to our <span className="underline cursor-pointer">Terms of Service</span> and <span className="underline cursor-pointer">Privacy Policy</span>.
-                             </p>
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="w-full bg-[#0B0F19] text-white py-4 rounded-xl font-bold hover:bg-black active:scale-[0.98] transition-all duration-200 shadow-xl shadow-slate-200 disabled:opacity-50"
-                            >
-                                {isLoading ? "Creating Account..." : "Start Free Trial"}
-                            </button>
-                        </div>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full bg-gray-accent text-white py-4 rounded-2xl font-black text-lg hover:bg-gray-accent-dark active:scale-[0.98] transition-all duration-300 shadow-xl shadow-gray-200 disabled:opacity-50 mt-4"
+                        >
+                            {isLoading ? "Creating Account..." : "Create Free Account"}
+                        </button>
                     </form>
+
+                    <p className="text-[10px] text-slate-400 mt-8 text-center uppercase tracking-widest font-black leading-loose">
+                        By signing up, you agree to our <br /> <span className="underline cursor-pointer">Terms of Service</span> and <span className="underline cursor-pointer">Privacy Policy</span>.
+                    </p>
+                </div>
+            </div>
+
+            <div className="hidden lg:flex lg:col-span-7 bg-sage-500 relative flex-col justify-center items-center overflow-hidden animate-in fade-in duration-1000">
+                {/* Background Image */}
+                <img 
+                    src="/auth-bg.png" 
+                    alt="Clinical Background" 
+                    className="absolute inset-0 w-full h-full object-cover opacity-70"
+                />
+
+                {/* Sage overlay for color consistency */}
+                <div className="absolute inset-0 bg-sage-600/30" />
+
+                {/* Dark gradient for text readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
+                <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] bg-white/10 rounded-full blur-[100px] animate-pulse" />
+                <div className="absolute -bottom-[10%] -left-[20%] w-[70%] h-[70%] bg-sage-600/20 rounded-full blur-[130px]" />
+                
+                <div className="relative z-10 text-center px-12">
+                    <h2 className="text-white text-8xl xl:text-9xl font-black tracking-tighter leading-none mb-6 animate-in slide-in-from-bottom-12 duration-1000 delay-300">
+                        Join.
+                    </h2>
+                    <p className="text-white/80 text-lg xl:text-xl font-medium max-w-lg mx-auto leading-relaxed animate-in fade-in duration-1000 delay-500 uppercase tracking-[0.2em]">
+                        Experience The Future of Documentation
+                    </p>
+                </div>
+
+                <div className="absolute bottom-12 text-white/40 text-[10px] font-black uppercase tracking-[0.5em] animate-in fade-in duration-1000 delay-700">
+                    Secure • HIPAA Compliant • Accurate
                 </div>
             </div>
         </div>

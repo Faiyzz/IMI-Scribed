@@ -31,17 +31,17 @@ export default function MainLayout({
 
     if (isLoading) {
         return (
-            <div className="flex h-screen w-full items-center justify-center bg-[#060910]">
+            <div className="flex h-screen w-full items-center justify-center bg-white text-slate-900">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-                    <p className="text-sm font-medium text-slate-400">Verifying session...</p>
+                    <div className="w-10 h-10 border-4 border-sage-500/20 border-t-sage-500 rounded-full animate-spin" />
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Verifying session...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex h-screen bg-[#060910] text-white overflow-hidden">
+        <div className="flex h-screen bg-white text-slate-900 overflow-hidden font-sans">
             {/* Sidebar - desktop */}
             <div className="hidden md:flex h-full">
                 <Sidebar />
@@ -50,7 +50,7 @@ export default function MainLayout({
             {/* Main Area */}
             <div className="flex-1 flex flex-col h-full overflow-hidden">
                 <Topbar />
-                <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#060910]">
+                <main className="flex-1 overflow-y-auto p-4 md:p-10 bg-slate-50/50">
                     {children}
                 </main>
             </div>

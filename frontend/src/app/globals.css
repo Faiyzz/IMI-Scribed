@@ -1,26 +1,47 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: rgb(255, 255, 255);
+  --foreground: #1a1a1a;
+  
+  /* Sage Palette */
+  --primary-sage: #a4c4b5;
+  --primary-sage-dark: #8ba69b;
+  --primary-sage-light: #c2d6cc;
+  --primary-sage-soft: #e8f0ed;
+  
+  /* Accents */
+  --accent-gray: rgb(105, 105, 105);
+  --accent-gray-dark: rgb(80, 80, 80);
+  
+  /* Base */
+  --base-white: rgb(255, 255, 255);
+  --border-subtle: rgba(0, 0, 0, 0.05);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-sage-500: var(--primary-sage);
+  --color-sage-600: var(--primary-sage-dark);
+  --color-sage-400: var(--primary-sage-light);
+  --color-sage-soft: var(--primary-sage-soft);
+  --color-gray-accent: var(--accent-gray);
+  --color-gray-accent-dark: var(--accent-gray-dark);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  input, button, a {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 }

@@ -11,6 +11,7 @@ class SessionService {
         return await Session.create({
             clinicianId,
             patientName: data.patientName,
+            patientAge: data.patientAge,
             patientGender: data.patientGender,
             status: "active",
         });
@@ -57,6 +58,7 @@ class SessionService {
             id: session._id.toString(),
             clinicianId: session.clinicianId.toString(),
             patientName: session.patientName,
+            patientAge: session.patientAge,
             patientGender: session.patientGender,
             status: session.status,
             duration: session.duration,

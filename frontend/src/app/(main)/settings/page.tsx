@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, User, Bell, Lock, Database, Globe } from "lucide-react";
+import { Settings, User, Bell, Lock, Database, Globe, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 export default function SettingsPage() {
@@ -15,71 +15,84 @@ export default function SettingsPage() {
     ];
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-10 animate-in fade-in duration-700">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
-                <p className="text-white/50 mt-2">Configure your account, preferences, and security protocols.</p>
+                <h1 className="text-4xl font-black text-slate-900 tracking-tight">System Settings.</h1>
+                <p className="text-slate-400 font-medium mt-3 max-w-xl leading-relaxed">
+                    Configure your clinical environment, account preferences, and security protocols.
+                </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+                {/* TABS */}
                 <div className="space-y-2">
                     {tabs.map((item, i) => (
                         <div 
                             key={i} 
                             onClick={() => setActiveTab(item.name)}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 ${activeTab === item.name ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-white/50 hover:bg-white/5'}`}
+                            className={`flex items-center gap-4 px-6 py-4 rounded-2xl cursor-pointer transition-all duration-300 group ${
+                                activeTab === item.name 
+                                ? 'bg-sage-500 text-white shadow-xl shadow-sage-500/20 font-black' 
+                                : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900 font-bold'
+                            }`}
                         >
-                            <item.icon size={18} />
-                            <span className="text-sm font-medium">{item.name}</span>
+                            <item.icon size={20} className={activeTab === item.name ? 'text-white' : 'text-slate-300 group-hover:text-sage-500 transition-colors'} />
+                            <span className="text-sm tracking-wide">{item.name}</span>
                         </div>
                     ))}
                 </div>
 
-                <div className="md:col-span-3 bg-[#101522] border border-white/5 rounded-3xl p-8 space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                        <div className="space-y-6">
-                            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white/30">Theme Preferences</h3>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition cursor-pointer">
+                {/* CONTENT AREA */}
+                <div className="lg:col-span-3 bg-white border border-slate-100 rounded-[2.5rem] p-10 space-y-12 shadow-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+                        {/* THEME SECTION */}
+                        <div className="space-y-8">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Environment Preferences</h3>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between p-6 bg-slate-50/50 rounded-3xl border border-slate-50 hover:border-sage-500/20 transition-all cursor-pointer group">
                                     <div className="space-y-1">
-                                        <span className="text-sm font-semibold block">Dark Mode</span>
-                                        <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Enabled</span>
+                                        <span className="text-sm font-black text-slate-900 block tracking-tight group-hover:text-sage-600 transition-colors">Interface Theme</span>
+                                        <span className="text-[10px] text-sage-500 uppercase tracking-widest font-black">Light Mode (Default)</span>
                                     </div>
-                                    <div className="w-12 h-7 bg-blue-600 rounded-full relative shadow-inner ring-1 ring-white/10">
-                                        <div className="absolute right-1 top-1 w-5 h-5 bg-white rounded-full shadow-lg transition-all" />
+                                    <div className="w-12 h-7 bg-sage-500 rounded-full relative shadow-inner flex items-center px-1">
+                                         <div className="w-5 h-5 bg-white rounded-full shadow-lg absolute right-1" />
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 opacity-40 grayscale-[0.5]">
+                                
+                                <div className="flex items-center justify-between p-6 bg-slate-50/50 rounded-3xl border border-slate-50 opacity-50 grayscale cursor-not-allowed">
                                     <div className="space-y-1">
-                                        <span className="text-sm font-semibold block">Auto-Sync</span>
-                                        <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Disabled</span>
+                                        <span className="text-sm font-black text-slate-900 block tracking-tight">Auto-Cloud Sync</span>
+                                        <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Coming Soon</span>
                                     </div>
-                                    <div className="w-12 h-7 bg-white/10 rounded-full flex items-center px-1">
-                                        <div className="w-5 h-5 bg-white/20 rounded-full" />
+                                    <div className="w-12 h-7 bg-slate-200 rounded-full flex items-center px-1">
+                                        <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-6">
-                            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white/30">Language & Region</h3>
-                            <div className="space-y-3">
-                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex justify-between items-center group cursor-pointer hover:bg-white/[0.07] transition">
-                                    <span className="text-sm font-semibold">Display Language</span>
-                                    <span className="text-xs text-blue-400/80 font-bold uppercase tracking-wider group-hover:text-blue-400 transition">English (US)</span>
+                        {/* REGION SECTION */}
+                        <div className="space-y-8">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Localization</h3>
+                            <div className="space-y-4">
+                                <div className="p-6 bg-slate-50/50 rounded-3xl border border-slate-50 flex justify-between items-center group cursor-pointer hover:border-sage-500/20 transition-all">
+                                    <span className="text-sm font-black text-slate-900 tracking-tight group-hover:text-sage-600">Language</span>
+                                    <span className="text-[10px] text-sage-500 font-black uppercase tracking-widest bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-50">English (US)</span>
                                 </div>
-                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex justify-between items-center group cursor-pointer hover:bg-white/[0.07] transition">
-                                    <span className="text-sm font-semibold">Time Zone</span>
-                                    <span className="text-xs text-blue-400/80 font-bold uppercase tracking-wider group-hover:text-blue-400 transition">Auto (Detect)</span>
+                                <div className="p-6 bg-slate-50/50 rounded-3xl border border-slate-50 flex justify-between items-center group cursor-pointer hover:border-sage-500/20 transition-all">
+                                    <span className="text-sm font-black text-slate-900 tracking-tight group-hover:text-sage-600">Time Zone</span>
+                                    <span className="text-[10px] text-sage-500 font-black uppercase tracking-widest bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-50">Auto-Detect</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="pt-8 border-t border-white/5 flex justify-between items-center">
-                        <p className="text-xs text-white/30 font-medium italic">All changes are automatically synced with your account.</p>
-                        <button className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-3 rounded-xl text-sm font-bold transition shadow-xl shadow-blue-600/10 active:scale-95">
-                            Save Changes
+                    {/* FOOTER ACTION */}
+                    <div className="pt-10 border-t border-slate-50 flex flex-col sm:flex-row justify-between items-center gap-6">
+                        <p className="text-xs text-slate-300 font-black uppercase tracking-[0.2em] italic">Precision Protocol Sync: 100%</p>
+                        <button className="w-full sm:w-auto bg-gray-accent hover:bg-gray-accent-dark text-white px-12 py-5 rounded-[1.5rem] text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-gray-200 active:scale-95 flex items-center justify-center gap-3">
+                            Apply System Changes
+                            <ChevronRight size={16} />
                         </button>
                     </div>
                 </div>

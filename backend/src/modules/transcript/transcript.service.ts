@@ -1,138 +1,119 @@
 import { DeepgramClient } from "@deepgram/sdk";
 import { EventEmitter } from "events";
+import { env } from "../../core/config/env";
 
 /**
- * Interface for the compatibility wrapper that matches the old Deepgram v2 API.
- * This resolves TypeScript errors in server.ts when calling .send() and .finish().
+ * Interface for the compatibility wrapper that matches the Deepgram SDK API.
  */
 export interface DeepgramConnection extends EventEmitter {
     send: (data: any) => void;
     finish: () => void;
 }
 
-const deepgram = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY! });
-
-/**
- * Constants for WebSocket readyState
- */
-const WS_READY_STATE = {
-    CONNECTING: 0,
-    OPEN: 1,
-    CLOSING: 2,
-    CLOSED: 3
-};
+const deepgram = new DeepgramClient({ apiKey: env.DEEPGRAM_API_KEY });
 
 export const createDeepgramConnection = (): DeepgramConnection => {
     const emitter = new EventEmitter() as DeepgramConnection;
-    let socketInstance: any = null;
     const buffer: any[] = [];
+    let liveClient: any = null;
+    let isOpen = false;
 
-    // Use 'connect' as it is the base method in the SDK type definitions.
-    // Use an 'any' cast as the SDK types are too restrictive for optional fields.
+    // --- Create connection asynchronously
     (deepgram.listen.v1 as any).connect({
         model: "nova-2",
         smart_format: true,
         interim_results: true,
         diarize: true,
-    }).then((socket: any) => {
-        socketInstance = socket;
+    }).then((client: any) => {
+        liveClient = client;
 
-        // v5 requires calling connect() explicitly
-        socket.connect();
+        // In some v5 versions, you must call connect() to start the socket
+        if (typeof client.connect === "function") {
+            client.connect();
+        }
 
-        const flushBuffer = () => {
-            if (!socketInstance || socketInstance.readyState !== WS_READY_STATE.OPEN) return;
-
+        client.on("open", () => {
+            console.log("🟢 Deepgram socket OPEN");
+            isOpen = true;
+            emitter.emit("open");
+            
+            // Flush any buffered data
             while (buffer.length > 0) {
                 const chunk = buffer.shift();
-                try {
-                    socketInstance.sendMedia(chunk);
-                } catch (err: any) {
-                    // If it suddenly closed, put the chunk back at the start and stop flushing
-                    if (err.message?.includes("not open")) {
-                        buffer.unshift(chunk);
-                        break;
-                    }
-                    emitter.emit("error", err);
+                if (typeof client.sendMedia === "function") {
+                    client.sendMedia(chunk);
+                } else if (typeof client.send === "function") {
+                    client.send(chunk);
                 }
             }
-        };
-
-        socket.on("open", () => {
-            emitter.emit("open");
-            // Small delay to ensure internal readyState is fully synchronized
-            setTimeout(flushBuffer, 50);
         });
 
-        socket.on("message", (data: any) => {
-            // Debug: Log the type of message received
-            console.log("Deepgram message type:", data.type);
-            
-            // In v5, transcript data comes in 'Results' message type
-            if (data.type === "Results" && data.channel?.alternatives?.[0]) {
+        const handleResults = (data: any) => {
+            if (data.channel?.alternatives?.[0]) {
                 const transcript = data.channel.alternatives[0].transcript;
-                if (transcript) {
+                if (transcript && transcript.trim()) {
                     emitter.emit("transcriptReceived", {
                         text: transcript,
-                        isFinal: data.is_final,
+                        isFinal: !!(data.is_final || data.isFinal),
                     });
                 }
             }
-            emitter.emit("message", data);
+        };
+
+        client.on("Results", handleResults);
+
+        // Fallback for older v5 or different configurations
+        client.on("message", (data: any) => {
+            if (data.type === "Results") {
+                handleResults(data);
+            }
         });
 
-        socket.on("error", (err: any) => {
+        client.on("error", (err: any) => {
+            console.error("❌ Deepgram socket error:", err);
             emitter.emit("error", err);
         });
 
-        socket.on("close", () => {
+        client.on("close", () => {
+            console.log("🔒 Deepgram socket CLOSED");
+            isOpen = false;
             emitter.emit("close");
         });
-
-        // Add compatibility methods for the existing server.ts
-        emitter.send = (data: any) => {
-            if (socketInstance && socketInstance.readyState === WS_READY_STATE.OPEN) {
-                try {
-                    socketInstance.sendMedia(data);
-                } catch (err: any) {
-                    if (err.message?.includes("not open")) {
-                        buffer.push(data);
-                    } else {
-                        emitter.emit("error", err);
-                    }
-                }
-            } else {
-                // Buffer the data until the connection is open
-                buffer.push(data);
-            }
-        };
-
-        emitter.finish = () => {
-            try {
-                if (socketInstance) {
-                    socketInstance.close();
-                }
-            } catch (err) {
-                emitter.emit("error", err);
-            }
-        };
-
-        (emitter as any).socket = socket;
     }).catch((err: any) => {
+        console.error("❌ Failed to connect to Deepgram:", err);
         emitter.emit("error", err);
     });
 
-    // Provide placeholder methods in case they are called before the promise resolves
-    if (!emitter.send) {
-        emitter.send = (data: any) => {
+    emitter.send = (data: any) => {
+        if (liveClient && isOpen) {
+            try {
+                // Use sendMedia (v5) or send (common fallback)
+                if (typeof liveClient.sendMedia === "function") {
+                    liveClient.sendMedia(data);
+                } else if (typeof liveClient.send === "function") {
+                    liveClient.send(data);
+                }
+            } catch (err) {
+                console.error("Error sending to Deepgram:", err);
+            }
+        } else {
             buffer.push(data);
-        };
-    }
-    if (!emitter.finish) {
-        emitter.finish = () => {
-            // Nothing to finish yet
-        };
-    }
+        }
+    };
+
+    emitter.finish = () => {
+        if (liveClient) {
+            try {
+                if (typeof liveClient.finish === "function") {
+                    liveClient.finish();
+                } else if (typeof liveClient.close === "function") {
+                    liveClient.close();
+                }
+            } catch (err) {
+                // ignore
+            }
+        }
+    };
 
     return emitter;
 };

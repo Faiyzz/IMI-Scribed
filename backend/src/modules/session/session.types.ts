@@ -2,6 +2,7 @@ import { ISession } from "./session.model";
 
 export interface CreateSessionDto {
     patientName: string;
+    patientAge: number;
     patientGender: "male" | "female" | "other" | "prefer_not_to_say";
 }
 
@@ -15,6 +16,7 @@ export interface SessionResponse {
     id: string;
     clinicianId: string;
     patientName: string;
+    patientAge: number;
     patientGender: string;
     status: string;
     duration: number;

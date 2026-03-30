@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Mic, Square, Pause, Play, ChevronLeft, Shield, Clock, User } from "lucide-react";
+import { Mic, Square, Pause, Play, ChevronLeft, Shield, Clock, User, Activity } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import logger from "@/utils/logger";
@@ -26,7 +26,7 @@ export default function RecordingSessionPage() {
     const streamRef = useRef<MediaStream | null>(null);
 
     // Audio visualization state
-    const [audioLevels, setAudioLevels] = useState<number[]>(new Array(30).fill(5));
+    const [audioLevels, setAudioLevels] = useState<number[]>(new Array(40).fill(5));
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const animationFrameRef = useRef<number | null>(null);
@@ -34,21 +34,14 @@ export default function RecordingSessionPage() {
     useEffect(() => {
         fetchSession();
 
-        // 👇 INITIALIZE SOCKET & START SESSION
         const socket = io("http://localhost:5000");
         socketRef.current = socket;
 
         socket.on("connect", () => {
             logger.info("🟢 Socket connected:", socket.id);
-
             socket.emit("start-session", { sessionId: id });
-
             startRecording();
             startTimer();
-        });
-
-        socket.on("disconnect", () => {
-            logger.info("🔴 Socket disconnected");
         });
 
         socket.on("transcript", (data: { text: string; isFinal: boolean }) => {
@@ -60,89 +53,44 @@ export default function RecordingSessionPage() {
             }
         });
 
-        socket.on("error", (err) => {
-            logger.error("Socket error", err);
-        });
-
         return () => {
             cleanupSession();
         };
     }, [id]);
 
     useEffect(() => {
-        // Auto-scroll to bottom of transcripts
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [transcripts, interimTranscript]);
 
     const cleanupSession = () => {
-        logger.info("🧹 Cleaning up session resources...");
         stopTimer();
-
-        // 👇 STOP RECORDER
-        if (mediaRecorderRef.current) {
-            if (mediaRecorderRef.current.state !== "inactive") {
-                try {
-                    mediaRecorderRef.current.stop();
-                } catch (e) {
-                    logger.error("Error stopping media recorder", e);
-                }
-            }
-            mediaRecorderRef.current = null;
+        if (mediaRecorderRef.current?.state !== "inactive") {
+            try { mediaRecorderRef.current?.stop(); } catch (e) {}
         }
-
-        // 👇 STOP STREAM TRACKS (CRITICAL FOR MIC LED)
         if (streamRef.current) {
-            streamRef.current.getTracks().forEach((track) => {
-                track.stop();
-                logger.info(`Track stopped: ${track.kind} - ${track.label}`);
-            });
-            streamRef.current = null;
+            streamRef.current.getTracks().forEach(track => track.stop());
         }
-
-        // 👇 DISCONNECT SOCKET
-        if (socketRef.current) {
-            socketRef.current.disconnect();
-            socketRef.current = null;
-        }
-
-        // 👇 CLEANUP VISUALIZER
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
-        }
-
-        if (audioContextRef.current) {
-            if (audioContextRef.current.state !== 'closed') {
-                audioContextRef.current.close().catch(err => logger.error("Error closing AudioContext", err));
-            }
-            audioContextRef.current = null;
-        }
-
+        if (socketRef.current) socketRef.current.disconnect();
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        if (audioContextRef.current?.state !== 'closed') audioContextRef.current?.close();
+        
         setIsRecording(false);
     };
 
     const startRecording = async () => {
-        if (streamRef.current || mediaRecorderRef.current) return;
-
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                },
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
             });
-
             streamRef.current = stream;
 
-            // Setup Web Audio API for visualization
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
             const analyser = audioContext.createAnalyser();
             const source = audioContext.createMediaStreamSource(stream);
             source.connect(analyser);
-            analyser.fftSize = 64;
+            analyser.fftSize = 128;
 
             audioContextRef.current = audioContext;
             analyserRef.current = analyser;
@@ -150,68 +98,34 @@ export default function RecordingSessionPage() {
             const updateVisualizer = () => {
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
                 analyser.getByteFrequencyData(dataArray);
-
-                // Map frequency data to audio levels
-                const levels = Array.from(dataArray).slice(0, 30).map(v => (v / 255) * 100);
+                const levels = Array.from(dataArray).slice(0, 40).map(v => (v / 255) * 100);
                 setAudioLevels(levels);
-
                 animationFrameRef.current = requestAnimationFrame(updateVisualizer);
             };
             updateVisualizer();
 
-            const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: "audio/webm;codecs=opus",
-            });
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
             mediaRecorderRef.current = mediaRecorder;
-
-            mediaRecorder.onstart = () => {
-                logger.info("🎤 Recording started");
-                setIsRecording(true);
-            };
-
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0 && socketRef.current?.connected) {
-                    event.data.arrayBuffer().then((buffer) => {
-                        socketRef.current?.emit("audio-chunk", buffer);
-                    });
+                    event.data.arrayBuffer().then(buffer => socketRef.current?.emit("audio-chunk", buffer));
                 }
             };
-
-            mediaRecorder.onerror = (err) => {
-                logger.error("Recorder error", err);
-                toast.error("Recording error occurred.");
-            };
-
-            mediaRecorder.start(250); // 250ms chunks for real-time feel
+            mediaRecorder.start(250);
+            setIsRecording(true);
         } catch (error) {
-            logger.error("Mic access denied", error);
-            toast.error("Microphone access is required for real-time transcription.");
+            toast.error("Microphone access is required.");
         }
     };
 
-    const stopRecording = () => {
-        cleanupSession();
-        logger.info("🛑 Recording stopped via stopRecording");
-    };
-
-    // Removed separate socket useEffect as it's now combined with session effect
-
     const fetchSession = async () => {
         try {
-            const token = localStorage.getItem("auth-storage")
-                ? JSON.parse(localStorage.getItem("auth-storage")!).state.token
-                : null;
-
+            const token = localStorage.getItem("auth-storage") ? JSON.parse(localStorage.getItem("auth-storage")!).state.token : null;
             const response = await fetch(`http://localhost:5000/api/sessions/${id}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
             const result = await response.json();
-            if (result.success) {
-                setSession(result.data.session);
-            } else {
-                toast.error("Session not found");
-                router.push("/dashboard");
-            }
+            if (result.success) setSession(result.data.session);
         } catch (error) {
             toast.error("Failed to load session");
         } finally {
@@ -220,16 +134,11 @@ export default function RecordingSessionPage() {
     };
 
     const startTimer = () => {
-        timerRef.current = setInterval(() => {
-            setDuration(prev => prev + 1);
-        }, 1000);
+        timerRef.current = setInterval(() => setDuration(prev => prev + 1), 1000);
     };
 
     const stopTimer = () => {
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-        }
+        if (timerRef.current) clearInterval(timerRef.current);
     };
 
     const formatDuration = (sec: number) => {
@@ -240,105 +149,111 @@ export default function RecordingSessionPage() {
 
     const handleFinish = async () => {
         cleanupSession();
-        toast.success("Recording saved. Processing transcript...");
+        toast.success("Processing clinical summary...");
         router.push("/history");
     };
 
     if (isLoading) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] bg-[#0B0F19] flex flex-col items-center p-6 sm:p-12 overflow-hidden">
-            {/* Background Grain/Glow */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col items-center p-4 sm:p-10 overflow-hidden font-sans">
+            {/* Background Decorative Gradient */}
+            <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-sage-500/10 to-transparent pointer-events-none" />
 
-            {/* TOP BAR */}
-            <div className="w-full max-w-5xl flex justify-between items-center z-10 mb-12">
+            {/* TOP HEADER */}
+            <div className="w-full max-w-6xl flex justify-between items-center z-10 mb-8 px-4">
                 <button
                     onClick={() => router.back()}
-                    className="flex items-center gap-2 text-white/40 hover:text-white transition group bg-white/5 px-4 py-2 rounded-xl border border-white/5"
+                    className="flex items-center gap-3 text-slate-400 hover:text-slate-900 transition-all border border-slate-200 bg-white px-5 py-2.5 rounded-2xl shadow-sm hover:shadow-md group"
                 >
-                    <ChevronLeft size={18} className="group-hover:-translate-x-0.5 transition" />
-                    <span className="text-xs font-bold uppercase tracking-wider">Cancel Session</span>
+                    <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Abort Logic</span>
                 </button>
 
                 <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
-                        <Clock size={16} className="text-blue-400" />
-                        <span className="text-sm font-bold font-mono text-white/90">{formatDuration(duration)}</span>
+                    <div className="flex items-center gap-3 bg-white px-5 py-2.5 rounded-2xl border border-slate-200 shadow-sm">
+                        <Clock size={16} className="text-sage-500" />
+                        <span className="text-sm font-black font-mono text-slate-800 tracking-tighter">{formatDuration(duration)}</span>
                     </div>
                     {isRecording && (
-                        <div className="flex items-center gap-2 bg-green-500/10 px-4 py-2 rounded-full border border-green-500/20">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                            <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">Live Recording</span>
+                        <div className="flex items-center gap-2.5 bg-sage-50 text-sage-600 px-5 py-2.5 rounded-full border border-sage-100 shadow-sm shadow-sage-500/5">
+                            <div className="w-2.5 h-2.5 rounded-full bg-sage-500 animate-pulse ring-4 ring-sage-500/20" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Live Clinical Feed</span>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* MAIN CONTENT */}
-            <div className="max-w-4xl w-full flex-1 flex flex-col gap-8 z-10 overflow-hidden">
-                <div className="text-center space-y-4">
-                    <div className="inline-flex items-center gap-3 bg-white/5 px-6 py-2 rounded-2xl border border-white/10 mb-2">
-                        <User size={18} className="text-blue-400" />
-                        <span className="text-lg font-bold text-white uppercase tracking-wide">{session?.patientName}</span>
-                        <span className="w-1 h-1 rounded-full bg-white/20" />
-                        <span className="text-xs font-bold text-white/40 uppercase tracking-widest">{session?.patientGender}</span>
+            {/* MAIN INTERFACE */}
+            <div className="w-full max-w-5xl flex-1 flex flex-col gap-10 z-10 overflow-hidden px-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                       <div className="w-16 h-16 rounded-[1.5rem] bg-sage-500 text-white flex items-center justify-center shadow-2xl shadow-sage-500/30">
+                            <Activity size={32} />
+                       </div>
+                       <div>
+                            <h2 className="text-[10px] font-black text-sage-500 uppercase tracking-[0.3em] mb-1">Active Patient Encounter</h2>
+                            <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                                {session?.patientName}
+                                <span className="text-slate-300 font-medium">|</span>
+                                <span className="text-lg text-slate-400 font-bold uppercase tracking-widest">{session?.patientGender?.charAt(0)} • {session?.patientAge}Y</span>
+                            </h1>
+                       </div>
                     </div>
-                    <h1 className="text-4xl font-black text-white leading-tight">
-                        Real-time Transcription
-                    </h1>
                 </div>
 
-                {/* TRANSCRIPT AREA */}
+                {/* TRANSCRIPT CARD */}
                 <div
                     ref={scrollRef}
-                    className="flex-1 bg-white/[0.02] rounded-[2.5rem] border border-white/5 p-8 overflow-y-auto custom-scrollbar relative"
+                    className="flex-1 bg-white rounded-[3rem] border border-slate-100 p-10 overflow-y-auto custom-scrollbar shadow-2xl shadow-black/5 relative group"
                 >
-                    <div className="space-y-6">
-                        {transcripts.length === 0 && !interimTranscript && (
-                            <div className="flex flex-col items-center justify-center h-full text-white/20 py-12 space-y-4">
-                                <Mic size={48} className="animate-pulse" />
-                                <p className="font-medium">Waiting for speech...</p>
+                    {transcripts.length === 0 && !interimTranscript && (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-200 py-12 space-y-6">
+                            <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 border border-slate-100 group-hover:scale-110 transition-transform duration-700">
+                                <Mic size={40} className="animate-pulse" strokeWidth={1.5} />
                             </div>
-                        )}
+                            <div className="text-center space-y-2">
+                                <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-400">Awaiting Signal</p>
+                                <p className="text-[10px] text-slate-300 font-medium italic">"System is synchronized and ready for capture..."</p>
+                            </div>
+                        </div>
+                    )}
+                    <div className="max-w-3xl mx-auto space-y-8">
                         {transcripts.map((text, i) => (
-                            <div key={i} className="text-white/80 text-xl leading-relaxed font-medium animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div key={i} className="text-slate-800 text-2xl leading-relaxed font-bold animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 {text}
                             </div>
                         ))}
                         {interimTranscript && (
-                            <div className="text-white/30 text-xl leading-relaxed font-medium italic">
+                            <div className="text-slate-400 text-2xl leading-relaxed font-bold italic transition-opacity duration-300">
                                 {interimTranscript}
-                                <span className="inline-block w-1.5 h-5 bg-blue-500/40 ml-1 animate-pulse" />
+                                <span className="inline-block w-2.5 h-8 bg-sage-500/30 ml-2 animate-pulse rounded-full align-middle" />
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* VISUALIZER & CONTROLS CONTAINER */}
-                <div className="bg-white/5 rounded-[3rem] border border-white/10 p-8 space-y-8">
-                    {/* VISUALIZER */}
-                    <div className="flex items-end justify-center gap-1 h-16 sm:h-24 px-4">
+                {/* VISUALIZER & SYSTEM CONTROLS */}
+                <div className="bg-white rounded-[3rem] border border-slate-100 p-10 space-y-10 shadow-2xl shadow-black/5">
+                    {/* CENTERED VISUALIZER */}
+                    <div className="flex items-end justify-center gap-1.5 h-20 sm:h-24 w-full px-2 max-w-2xl mx-auto">
                         {audioLevels.map((level, i) => (
                             <div
                                 key={i}
-                                className="flex-1 bg-gradient-to-t from-blue-700 via-blue-400 to-white rounded-full transition-all duration-75 ease-out"
+                                className="flex-1 min-w-[2px] sm:min-w-[4px] bg-gradient-to-t from-sage-600 via-sage-400 to-sage-200 rounded-full transition-all duration-75 ease-out"
                                 style={{
-                                    height: isRecording ? `${Math.max(level, 10)}%` : '4px',
-                                    opacity: isRecording ? 0.3 + (level / 150) : 0.1,
-                                    maxWidth: '8px'
+                                    height: isRecording ? `${Math.max(level, 8)}%` : '6px',
+                                    opacity: isRecording ? 0.4 + (level / 120) : 0.15,
                                 }}
                             />
                         ))}
                     </div>
 
-                    {/* CONTROLS */}
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+                    {/* ACTION TRIGGERS */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-10">
                         <button
                             onClick={() => {
                                 if (!mediaRecorderRef.current) return;
-
                                 if (isRecording) {
                                     mediaRecorderRef.current.pause();
                                     setIsRecording(false);
@@ -347,44 +262,49 @@ export default function RecordingSessionPage() {
                                     setIsRecording(true);
                                 }
                             }}
-                            className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 border-2 active:scale-90 ${isRecording
-                                ? "bg-white/5 border-white/10 text-white hover:bg-white/10"
-                                : "bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-500/20"
+                            className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-500 border-4 active:scale-95 group shadow-xl ${isRecording
+                                ? "bg-slate-50 border-slate-100 text-slate-800 hover:bg-slate-100"
+                                : "bg-sage-500 border-sage-600 text-white shadow-sage-500/40"
                                 }`}
                         >
-                            {isRecording ? <Pause fill="currentColor" size={24} /> : <Play fill="currentColor" size={24} />}
+                            {isRecording ? (
+                                <Pause fill="currentColor" size={32} className="group-hover:scale-110 transition-transform" />
+                            ) : (
+                                <Play fill="currentColor" size={32} className="group-hover:scale-110 transition-transform" />
+                            )}
                         </button>
 
                         <button
                             onClick={handleFinish}
-                            className="group bg-white text-[#0B0F19] px-12 py-5 rounded-[2rem] font-black text-xl uppercase tracking-wider flex items-center gap-4 hover:scale-105 transition-all active:scale-95 shadow-2xl shadow-white/10"
+                            className="bg-gray-accent hover:bg-gray-accent-dark text-white px-16 py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.3em] flex items-center gap-5 hover:scale-105 transition-all active:scale-95 shadow-2xl shadow-gray-300 group"
                         >
-                            <Square fill="currentColor" size={22} />
-                            Finish Session
+                            <Square fill="currentColor" size={20} className="group-hover:rotate-90 transition-transform duration-500" />
+                            Seal Clinical Record
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* BOTTOM INFO */}
-            <div className="mt-8 flex items-center gap-3 text-white/20 z-10">
-                <Shield size={16} />
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Clinical Precision • Data Privacy Secured</span>
+            {/* COMPLIANCE FOOTER */}
+            <div className="mt-10 flex items-center gap-4 text-slate-300 z-10 bg-white/50 px-6 py-2 rounded-full border border-slate-200/50 backdrop-blur-sm">
+                <Shield size={16} className="text-sage-500" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] font-mono">Precision Protocol • End-to-End HIPAA Cryptography</span>
             </div>
 
             <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
+                    width: 8px;
                 }
                 .custom-scrollbar::-webkit-scrollbar-track {
                     background: transparent;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 10px;
+                    background: #f1f5f9;
+                    border-radius: 20px;
+                    border: 2px solid white;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: rgba(255, 255, 255, 0.2);
+                    background: #e2e8f0;
                 }
             `}</style>
         </div>
