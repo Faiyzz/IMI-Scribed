@@ -35,7 +35,7 @@ export default function RecordingSessionPage() {
     useEffect(() => {
         fetchSession();
 
-        const socket = io("http://localhost:5000");
+        const socket = io(getApiUrl());
         socketRef.current = socket;
 
         socket.on("connect", () => {
