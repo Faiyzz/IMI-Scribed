@@ -12,11 +12,13 @@ import { env } from "./core/config/env";
 const app: Application = express();
 
 // Standard middlewares
-app.use(helmet({ crossOriginResourcePolicy: false })); // More permissive for now
+app.use(helmet({ crossOriginResourcePolicy: false, contentSecurityPolicy: false })); // More permissive for now
 app.use(cors({ 
-    origin: "*",
+    origin: [/https:\/\/.*\.vercel\.app$/, "https://imi-scribed-production.up.railway.app", "http://localhost:3000", /\.vercel\.app$/],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    credentials: true,
+    optionsSuccessStatus: 200 // Some legacy browsers crash on 204
 })); // Enable CORS
 app.use(express.json()); // Body parsing
 app.use(cookieParser()); // Cookie parsing
